@@ -1,0 +1,483 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  username      String    @unique
+  name          String?
+  password      String? // Hashed, null for OAuth users
+  avatar        String?   @default("https://avatar.vercel.sh/")
+  bio           String?   @db.Text
+  location      String?
+  website       String?
+  github        String?
+  twitter       String?
+  role          UserRole  @default(USER)
+  plan          Plan      @default(FREE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  executions   Execution[]
+  savedCodes   SavedCode[]
+  challenges   UserChallenge[]
+  snippets     Snippet[]
+  comments     Comment[]
+  likes        Like[]
+  badges       UserBadge[]
+  streak       Streak?
+  subscription Subscription?
+  usage        Usage[]
+  following    Follow[]        @relation("Follower")
+  followers    Follow[]        @relation("Following")
+  achievements Achievement[]
+
+  @@index([email])
+  @@index([username])
+  @@index([plan])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// CODE EXECUTION
+// ============================================
+
+model Execution {
+  id            String          @id @default(cuid())
+  userId        String
+  code          String          @db.Text
+  language      String
+  input         String?         @db.Text
+  output        String?         @db.Text
+  error         String?         @db.Text
+  executionTime Int? // milliseconds
+  memoryUsed    Int? // bytes
+  exitCode      Int?
+  status        ExecutionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([language])
+  @@map("executions")
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  ERROR
+  TIMEOUT
+}
+
+model SavedCode {
+  id          String  @id @default(cuid())
+  userId      String
+  title       String
+  code        String  @db.Text
+  language    String
+  description String? @db.Text
+  isPublic    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("saved_codes")
+}
+
+// ============================================
+// LEARNING / CHALLENGES
+// ============================================
+
+model Challenge {
+  id          String     @id @default(cuid())
+  title       String
+  description String     @db.Text
+  difficulty  Difficulty
+  language    String
+  starterCode String     @db.Text
+  solution    String     @db.Text
+  tags        String[]
+  points      Int        @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  testCases TestCase[]
+  hints     Hint[]
+  users     UserChallenge[]
+
+  @@index([difficulty])
+  @@index([language])
+  @@map("challenges")
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model TestCase {
+  id             String  @id @default(cuid())
+  challengeId    String
+  input          String  @db.Text
+  expectedOutput String  @db.Text
+  isHidden       Boolean @default(false)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId])
+  @@map("test_cases")
+}
+
+model Hint {
+  id          String @id @default(cuid())
+  challengeId String
+  content     String @db.Text
+  order       Int // Display order
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId])
+  @@map("hints")
+}
+
+model UserChallenge {
+  id          String  @id @default(cuid())
+  userId      String
+  challengeId String
+  completed   Boolean @default(false)
+  attempts    Int     @default(0)
+  bestTime    Int? // milliseconds
+  code        String? @db.Text
+  hintsUsed   Int     @default(0)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+  @@index([challengeId])
+  @@index([completed])
+  @@map("user_challenges")
+}
+
+// ============================================
+// SOCIAL / SNIPPETS
+// ============================================
+
+model Snippet {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?  @db.Text
+  code        String   @db.Text
+  language    String
+  isPublic    Boolean  @default(true)
+  tags        String[]
+  views       Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  likes    Like[]
+
+  @@index([userId])
+  @@index([isPublic, createdAt])
+  @@index([language])
+  @@map("snippets")
+}
+
+model Comment {
+  id        String  @id @default(cuid())
+  content   String  @db.Text
+  userId    String
+  snippetId String
+  parentId  String? // For nested replies
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snippet Snippet   @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([snippetId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Like {
+  id        String @id @default(cuid())
+  userId    String
+  snippetId String
+
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snippet Snippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, snippetId])
+  @@index([snippetId])
+  @@map("likes")
+}
+
+model Follow {
+  id          String @id @default(cuid())
+  followerId  String
+  followingId String
+
+  createdAt DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+model Badge {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String // Emoji or icon identifier
+  criteria    String @db.Text // JSON with criteria
+  rarity      Rarity @default(COMMON)
+
+  createdAt DateTime @default(now())
+
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+enum Rarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model UserBadge {
+  id      String @id @default(cuid())
+  userId  String
+  badgeId String
+
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("user_badges")
+}
+
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActivityAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("streaks")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  type        String // Achievement type (e.g., "first_execution", "100_challenges")
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("achievements")
+}
+
+// ============================================
+// SUBSCRIPTION & BILLING
+// ============================================
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  stripeSubscriptionId   String?            @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  status                 SubscriptionStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  UNPAID
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  subscriptionId  String
+  stripeInvoiceId String?       @unique
+  amount          Int // cents
+  currency        String        @default("usd")
+  status          InvoiceStatus
+  paidAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  PAID
+  OPEN
+  VOID
+  UNCOLLECTIBLE
+}
+
+// ============================================
+// USAGE TRACKING
+// ============================================
+
+model Usage {
+  id             String @id @default(cuid())
+  userId         String
+  executionCount Int    @default(0) // Executions per month
+  aiQueriesCount Int    @default(0) // AI queries per month
+  month          Int // Month (1-12)
+  year           Int // Year
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@index([userId])
+  @@map("usage")
+}
