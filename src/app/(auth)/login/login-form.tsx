@@ -50,7 +50,7 @@ export function LoginForm() {
         return;
       }
 
-      // Redirigir manualmente después del login exitoso
+      // Redirect to editor on successful login
       router.push("/editor");
       router.refresh();
     } catch (error) {

@@ -25,7 +25,8 @@ export function UserMenu({ user }: UserMenuProps) {
   const initials =
     user.name
       ?.split(" ")
-      .filter(Boolean)
+      .filter((n) => n.length > 0)
+      .slice(0, 2) // Take only first and last name
       .map((n) => n[0])
       .join("")
       .toUpperCase() || "U";
@@ -33,7 +34,11 @@ export function UserMenu({ user }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+        <Button
+          variant="ghost"
+          className="relative h-9 w-9 rounded-full"
+          aria-label={`User menu for ${user.name || user.email || "user"}`}
+        >
           <Avatar className="h-9 w-9">
             <AvatarImage src={user.image || ""} alt={user.name || ""} />
             <AvatarFallback className="bg-[#6C63FF] text-white">

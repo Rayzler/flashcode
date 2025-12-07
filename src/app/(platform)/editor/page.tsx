@@ -9,7 +9,6 @@ import { UserMenu } from "./components/user-menu";
 export default async function EditorPage() {
   const session = await auth();
 
-  // Middleware server-side fallback
   if (!session) {
     redirect("/login");
   }

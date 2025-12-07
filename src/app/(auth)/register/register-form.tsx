@@ -36,7 +36,7 @@ export function RegisterForm() {
         return;
       }
 
-      // Auto sign in después del registro
+      // Auto sign in after successful registration
       await signIn("credentials", {
         email,
         password,
