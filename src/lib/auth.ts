@@ -5,8 +5,54 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Extend the adapter to automatically generate username for OAuth users
+const customAdapter = {
+  ...PrismaAdapter(prisma),
+  async createUser(user: {
+    email: string;
+    name?: string | null;
+    image?: string | null;
+    emailVerified?: Date | null;
+  }) {
+    // Generate username from email (everything before @)
+    const baseUsername = user.email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    let username = baseUsername;
+    let counter = 1;
+
+    // Retry until we find a unique username (handles race conditions)
+    while (true) {
+      try {
+        return await prisma.user.create({
+          data: {
+            email: user.email,
+            name: user.name,
+            emailVerified: user.emailVerified,
+            username,
+            avatar: user.image
+          }
+        });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // If username collision, try next counter
+        if (
+          error.code === "P2002" &&
+          error.meta?.target?.includes("username")
+        ) {
+          username = `${baseUsername}${counter}`;
+          counter++;
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+};
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: customAdapter,
   session: {
     strategy: "jwt"
   },
