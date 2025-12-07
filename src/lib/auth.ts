@@ -22,21 +22,32 @@ const customAdapter = {
     let username = baseUsername;
     let counter = 1;
 
-    // Check if username already exists and add counter if needed
-    while (await prisma.user.findUnique({ where: { username } })) {
-      username = `${baseUsername}${counter}`;
-      counter++;
-    }
-
-    return await prisma.user.create({
-      data: {
-        email: user.email,
-        name: user.name,
-        emailVerified: user.emailVerified,
-        username,
-        avatar: user.image
+    // Retry until we find a unique username (handles race conditions)
+    while (true) {
+      try {
+        return await prisma.user.create({
+          data: {
+            email: user.email,
+            name: user.name,
+            emailVerified: user.emailVerified,
+            username,
+            avatar: user.image
+          }
+        });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // If username collision, try next counter
+        if (
+          error.code === "P2002" &&
+          error.meta?.target?.includes("username")
+        ) {
+          username = `${baseUsername}${counter}`;
+          counter++;
+        } else {
+          throw error;
+        }
       }
-    });
+    }
   }
 };
 
