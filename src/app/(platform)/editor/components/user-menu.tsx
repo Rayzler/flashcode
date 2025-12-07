@@ -25,6 +25,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const initials =
     user.name
       ?.split(" ")
+      .filter(Boolean)
       .map((n) => n[0])
       .join("")
       .toUpperCase() || "U";
