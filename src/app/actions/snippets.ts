@@ -27,6 +27,17 @@ export async function createSnippet(input: CreateSnippetInput) {
       return { success: false, error: "Unauthorized" };
     }
 
+    // Validate inputs
+    if (!input.title?.trim()) {
+      return { success: false, error: "Title is required" };
+    }
+    if (!input.code?.trim()) {
+      return { success: false, error: "Code is required" };
+    }
+    if (!input.language?.trim()) {
+      return { success: false, error: "Language is required" };
+    }
+
     const snippet = await prisma.savedCode.create({
       data: {
         userId: session.user.id,
@@ -34,7 +45,7 @@ export async function createSnippet(input: CreateSnippetInput) {
         code: input.code,
         language: input.language,
         description: input.description || null,
-        isPublic: false // MVP: solo privados
+        isPublic: false // MVP: only private
       }
     });
 
@@ -79,10 +90,10 @@ export async function getSnippet(id: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const snippet = await prisma.savedCode.findUnique({
+    const snippet = await prisma.savedCode.findFirst({
       where: {
         id,
-        userId: session.user.id // Solo sus propios snippets
+        userId: session.user.id // Only own snippets
       }
     });
 
@@ -105,11 +116,29 @@ export async function updateSnippet(input: UpdateSnippetInput) {
       return { success: false, error: "Unauthorized" };
     }
 
+    // Validate inputs
+    if (!input.title?.trim()) {
+      return { success: false, error: "Title is required" };
+    }
+    if (!input.code?.trim()) {
+      return { success: false, error: "Code is required" };
+    }
+    if (!input.language?.trim()) {
+      return { success: false, error: "Language is required" };
+    }
+
+    // Verify ownership first
+    const existing = await prisma.savedCode.findUnique({
+      where: { id: input.id },
+      select: { userId: true }
+    });
+
+    if (!existing || existing.userId !== session.user.id) {
+      return { success: false, error: "Snippet not found" };
+    }
+
     const snippet = await prisma.savedCode.update({
-      where: {
-        id: input.id,
-        userId: session.user.id // Solo sus propios snippets
-      },
+      where: { id: input.id },
       data: {
         title: input.title,
         code: input.code,
@@ -135,11 +164,18 @@ export async function deleteSnippet(id: string) {
       return { success: false, error: "Unauthorized" };
     }
 
+    // Verify ownership first
+    const existing = await prisma.savedCode.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!existing || existing.userId !== session.user.id) {
+      return { success: false, error: "Snippet not found" };
+    }
+
     await prisma.savedCode.delete({
-      where: {
-        id,
-        userId: session.user.id // Solo sus propios snippets
-      }
+      where: { id }
     });
 
     revalidatePath("/editor");
