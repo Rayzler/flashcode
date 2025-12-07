@@ -20,7 +20,7 @@ export async function registerUser(
   const { email, password, name } = input;
 
   try {
-    // Verificar si el usuario ya existe
+    // Verify if email is already registered
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -32,24 +32,24 @@ export async function registerUser(
       };
     }
 
-    // Generar username único desde el email
+    // Generate unique username from email
     const baseUsername = email
       .split("@")[0]
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "");
-    let username = baseUsername;
+    let username = baseUsername || "user";
     let counter = 1;
 
-    // Asegurar que el username sea único
+    // Ensure the username is unique
     while (await prisma.user.findUnique({ where: { username } })) {
       username = `${baseUsername}${counter}`;
       counter++;
     }
 
-    // Hash de la contraseña
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Crear usuario
+    // Create user account
     await prisma.user.create({
       data: {
         email,
