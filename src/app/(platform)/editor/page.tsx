@@ -2,8 +2,17 @@ import Link from "next/link";
 import { Code2 } from "lucide-react";
 import { CodeEditor } from "./components/code-editor";
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { UserMenu } from "./components/user-menu";
 
-export default function EditorPage() {
+export default async function EditorPage() {
+  const session = await auth();
+
+  if (!session) {
+    redirect("/login");
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[#0A0E14]">
       {/* Navigation */}
@@ -25,15 +34,9 @@ export default function EditorPage() {
                 size="sm"
                 className="text-[#ACB2BD] hover:text-[#E6E8EB] hover:bg-[#1C2229] text-sm"
               >
-                Save
+                My Snippets
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#ACB2BD] hover:text-[#E6E8EB] hover:bg-[#1C2229] text-sm"
-              >
-                Share
-              </Button>
+              <UserMenu user={session.user} />
             </div>
           </div>
         </div>
