@@ -14,7 +14,14 @@ export function RegisterForm() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signIn("google", { callbackUrl: "/editor" });
+    setError(null);
+    try {
+      await signIn("google", { callbackUrl: "/editor" });
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError("Failed to sign in with Google. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
