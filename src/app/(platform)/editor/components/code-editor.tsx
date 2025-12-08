@@ -56,6 +56,19 @@ export function CodeEditor() {
   };
 
   const handleLoadSnippet = (snippet: { code: string; language: string }) => {
+    // Check if current code differs from starter code
+    const hasUnsavedChanges = code !== STARTER_CODE[language];
+
+    if (hasUnsavedChanges) {
+      if (
+        !confirm(
+          "You have unsaved changes. Loading a snippet will replace your current code. Continue?"
+        )
+      ) {
+        return;
+      }
+    }
+    
     setCode(snippet.code);
     setLanguage(snippet.language as Language);
     setOutput("");
