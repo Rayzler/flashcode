@@ -18,6 +18,7 @@ interface Snippet {
   title: string;
   language: string;
   code: string;
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,15 +39,23 @@ export function SnippetsListDialog({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setIsLoading(true);
-      getMySnippets().then((result) => {
+    if (!open) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+
+    getMySnippets().then((result) => {
+      if (isMounted) {
         if (result.success && result.snippets) {
           setSnippets(result.snippets as Snippet[]);
         }
         setIsLoading(false);
-      });
-    }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [open]);
 
   const handleDelete = async (id: string) => {
@@ -108,7 +117,7 @@ export function SnippetsListDialog({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                   <Button
                     size="sm"
                     variant="ghost"

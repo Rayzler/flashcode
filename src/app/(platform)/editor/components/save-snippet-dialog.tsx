@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface SaveSnippetDialogProps {
   open: boolean;
@@ -29,11 +28,23 @@ export function SaveSnippetDialog({
   code,
   language
 }: SaveSnippetDialogProps) {
-  const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setError(null);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !isLoading) {
+      resetForm();
+    }
+    onOpenChange(newOpen);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -52,10 +63,8 @@ export function SaveSnippetDialog({
     });
 
     if (result.success) {
-      setTitle("");
-      setDescription("");
+      resetForm();
       onOpenChange(false);
-      router.refresh();
     } else {
       setError(result.error || "Failed to save snippet");
     }
@@ -64,7 +73,7 @@ export function SaveSnippetDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-[#14181F] border-[#2D3340] text-[#E6E8EB]">
         <DialogHeader>
           <DialogTitle>Save Snippet</DialogTitle>
@@ -75,7 +84,10 @@ export function SaveSnippetDialog({
 
         <div className="space-y-4 py-4">
           {error && (
-            <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-md p-3">
+            <div
+              className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-md p-3"
+              role="alert"
+            >
               <p className="text-sm text-[#EF4444]">{error}</p>
             </div>
           )}
@@ -89,6 +101,8 @@ export function SaveSnippetDialog({
               onChange={(e) => setTitle(e.target.value)}
               disabled={isLoading}
               className="bg-[#1C2229] border-[#2D3340]"
+              aria-invalid={!!error}
+              aria-describedby={error ? "title-error" : undefined}
             />
           </div>
 
@@ -112,7 +126,7 @@ export function SaveSnippetDialog({
         <DialogFooter>
           <Button
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={isLoading}
           >
             Cancel
