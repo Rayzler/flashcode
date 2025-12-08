@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, Save, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "./language-selector";
 import { Language } from "@/types/editor";
@@ -9,6 +9,8 @@ interface ToolbarProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
   onRun: () => void;
+  onSave: () => void;
+  onLoadSnippets: () => void;
   isExecuting: boolean;
 }
 
@@ -16,6 +18,8 @@ export function Toolbar({
   language,
   onLanguageChange,
   onRun,
+  onSave,
+  onLoadSnippets,
   isExecuting
 }: ToolbarProps) {
   return (
@@ -39,6 +43,28 @@ export function Toolbar({
             Run Code
           </>
         )}
+      </Button>
+
+      <div className="h-6 w-px bg-[#2D3340]" />
+
+      <Button
+        onClick={onSave}
+        variant="ghost"
+        size="sm"
+        className="text-[#ACB2BD] hover:text-[#E6E8EB] hover:bg-[#1C2229]"
+      >
+        <Save className="w-4 h-4 mr-2" />
+        Save
+      </Button>
+
+      <Button
+        onClick={onLoadSnippets}
+        variant="ghost"
+        size="sm"
+        className="text-[#ACB2BD] hover:text-[#E6E8EB] hover:bg-[#1C2229]"
+      >
+        <FolderOpen className="w-4 h-4 mr-2" />
+        My Snippets
       </Button>
 
       <div className="ml-auto text-xs text-[#ACB2BD] font-mono">
